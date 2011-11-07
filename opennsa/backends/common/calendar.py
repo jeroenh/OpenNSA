@@ -56,9 +56,14 @@ class ReservationCalendar:
 
     # port temporal availability
     def _portOverlap(self, res1_start_time, res1_end_time, res2_start_time, res2_end_time):
-        if res1_start_time >= res2_start_time and res1_start_time <= res2_end_time:
+        if res2_end_time < res2_start_time:
+            #this makes no sense :D
             return True
-        if res1_start_time <= res2_start_time and res1_start_time <= res2_end_time:
-            return True
-        return False
-
+        if res2_end_time < res1_start_time:
+           #ends before me so it's fine
+            return False
+        if res2_start_time > res1_end_time:
+            #starts after me so it's fine
+            return False
+        #stuff overlaps
+        return True
