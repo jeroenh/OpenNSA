@@ -155,6 +155,7 @@ class Connection:
                 self.state.switchState(state.TERMINATED)
                 if any(successes):
                     failure_msg = ' # '.join( [ f.getErrorMessage() for success,f in results if success is False ] )
+                    log.msg('Partial failure in reserve, attempting termination of reserved sub-connections (%s)' % failure_msg, system=LOG_SYSTEM)
                     error_msg = 'Partial failure in reserve, attempting termination of reserved sub-connections (%s)' % failure_msg
                     # terminate non-failed connections
                     reserved_connections = [ conn for success,conn in results if success ]
@@ -246,7 +247,7 @@ class Connection:
         def connectionReleased(results):
             successes = [ r[0] for r in results ]
             if all(successes):
-                self.state.switchState(state.RESERVED)
+                self.state.switchState(state.SCHEDULED)
                 if len(results) > 1:
                     log.msg('Connection %s and all sub connections(%i) released' % (self.connection_id, len(results)-1), system=LOG_SYSTEM)
                 return self
