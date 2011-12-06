@@ -1,10 +1,15 @@
 This is the OpenNSA issue tracker :-)
 
+Stuff to do:
+  Better handling and reporting of aggregation failures (partial or not)
+  Investigate error message on connection id
+  TLS (send mail aswell)
+  Configuration
+
 
 General:
-  Connection state layering problem (top state only updated on commands)
+  Deal with bandwidth in calendar (requires joint resource concept)
   Persistence for connections
-  Cleanups (mostly in backends)
   Command line client (Jeroen and HTJ will have a fight-off about which to use :-) )
   More backends :-)
 
@@ -13,8 +18,4 @@ Argia backend:
   State scheduling to terminated does not work.
   Switch to using calendar and scheduler
   Use the query interface
-
-DUD backend:
-  Switch to using calendar and scheduler
-
 

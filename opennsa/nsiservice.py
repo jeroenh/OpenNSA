@@ -37,7 +37,7 @@ class NSIService:
 
         # get own nsa from topology
         self.nsa = self.topology.getNetwork(self.network).nsa
-        self.proxy = proxy.NSIProxy(client, self.nsa, self.topology)
+        self.proxy = proxy.NSIProxy(client, self.nsa)
 
         self.connections = {} # persistence, ha!
 
@@ -60,14 +60,13 @@ class NSIService:
 
         # should check for local network
         if source_ep.network == self.network:
-            assert conn.local_connection is None, 'Cannot have multiple local sub-connection in connection'
-            conn.local_connection = self.backend.createConnection(source_ep.nrmPort(), dest_ep.nrmPort(), sub_sps)
-
+            sub_conn = self.backend.createConnection(source_ep.nrmPort(), dest_ep.nrmPort(), sub_sps)
         else:
             sub_conn_id = 'urn:uuid:' + str(uuid.uuid1())
-            # FIXME should be setup with NSA context, not network
-            sub_conn = connection.SubConnection(conn, sub_conn_id, source_ep.network, source_ep, dest_ep, sub_sps, proxy=self.proxy)
-            conn.sub_connections.append(sub_conn)
+            remote_nsa = self.topology.getNetwork(source_ep.network).nsa
+            sub_conn = connection.SubConnection(conn, sub_conn_id, remote_nsa, source_ep, dest_ep, sub_sps, self.proxy)
+
+        conn.sub_connections.append(sub_conn)
 
         return conn
 
@@ -143,17 +142,12 @@ class NSIService:
                 paths = self.topology.findPaths(source_stp, dest_stp)
 
                 # check for no paths
-                paths.sort(key=lambda e : len(e.endpoint_pairs))
+                paths.sort(key=lambda e : len(e.links()))
                 selected_path = paths[0] # shortest path
                 log.msg('Attempting to create path %s' % selected_path, system=LOG_SYSTEM)
 
-                prev_source_stp = selected_path.source_stp
-
-                for stp_pair in selected_path.endpoint_pairs:
-                    self.setupSubConnection(prev_source_stp, stp_pair.stp1, conn, service_parameters)
-                    prev_source_stp = stp_pair.stp2
-                # last hop
-                self.setupSubConnection(prev_source_stp, selected_path.dest_stp, conn, service_parameters)
+                for link in selected_path.links():
+                    self.setupSubConnection(link.stp1, link.stp2, conn, service_parameters)
 
         except Exception, e:
             log.msg('Error setting up connection: %s' % str(e), system=LOG_SYSTEM)
@@ -164,7 +158,8 @@ class NSIService:
             return conn
 
         def logError(err):
-            log.msg(err.getErrorMessage(), system=LOG_SYSTEM)
+            log.msg('Connection %s: Reserve failed' % conn.connection_id, system=LOG_SYSTEM)
+            log.err(err, debug=True)
             return err
 
         # now reserve connections needed to create path
@@ -193,13 +188,17 @@ class NSIService:
 
     def provision(self, requester_nsa, provider_nsa, session_security_attr, connection_id):
 
+        def provisionSucceeded(conn):
+            log.msg('Connection %s: Provision succeeded' % conn.connection_id, system=LOG_SYSTEM)
+            return conn
+
         log.msg('', system=LOG_SYSTEM)
         # security check here
 
         try:
             conn = self.getConnection(requester_nsa, connection_id)
             d = conn.provision()
-            d.addErrback(_logError)
+            d.addCallback(provisionSucceeded)
             return d
         except error.NoSuchConnectionError, e:
             log.msg('NSA %s requested non-existing connection %s' % (requester_nsa, connection_id), system=LOG_SYSTEM)
@@ -239,8 +238,10 @@ class NSIService:
                 match = lambda conn : conn.connection_id in connection_ids if connection_ids is not None else False or \
                                       conn.global_reservation_id in global_reservation_ids if global_reservation_ids is not None else False
 
+            # This hack can be removed after SC11
             if requester_nsa == 'urn:ogf:network:nsa:OpenNSA-querier':
-                log.msg('Enabling special demo query support for querier: %s' % (requester_nsa), system=LOG_SYSTEM)
+                # Be less noisy, query is something that happens fairly often.
+                #log.msg('Enabling special demo query support for querier: %s' % (requester_nsa), system=LOG_SYSTEM)
                 for connections in self.connections.values():
                     for conn in connections.values():
                         if match(conn):
