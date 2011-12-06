@@ -19,7 +19,6 @@ from zope.interface import implements
 from opennsa import nsa, error, state as state, interface as nsainterface
 from opennsa.backends.common.calendar import ReservationCalendar
 from opennsa.backends.sshexpect import SSHExpect
-from opennsa.backends.f10_settings import *
 from ConfigParser import ConfigParser
 
 
