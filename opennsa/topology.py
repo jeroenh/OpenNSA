@@ -366,4 +366,4 @@ def parseGOLERDFTopology(topology_source):
 
     return topo
 
-
+parseGOLETopology = parseGOLERDFTopology
