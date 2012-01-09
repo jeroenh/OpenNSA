@@ -13,8 +13,9 @@ from twisted.python import log
 from twisted.internet import defer
 
 from opennsa.interface import NSIServiceInterface
-from opennsa import error, topology, connection
-
+# from opennsa import error, topology, connection
+from opennsa import error, connection
+from opennsa import topologyrdf as topology
 
 LOG_SYSTEM = 'opennsa.NSIService'
 

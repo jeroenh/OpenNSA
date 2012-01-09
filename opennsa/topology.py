@@ -10,7 +10,6 @@ import json
 import StringIO
 from xml.etree import ElementTree as ET
 
-import rdflib
 
 from opennsa import nsa, error
 
@@ -34,7 +33,7 @@ GLIF_AVAILABLE_CAPACITY = ET.QName('{%s}availableCapacity' % GLIF_PREFIX)
 GLIF_MANAGED_BY         = ET.QName('{%s}managedBy' % GLIF_PREFIX)
 GLIF_PROVIDER_ENDPOINT  = ET.QName('{%s}csProviderEndpoint' % GLIF_PREFIX)
 
-
+        
 class Topology:
 
     def __init__(self):
@@ -42,6 +41,7 @@ class Topology:
 
 
     def addNetwork(self, network):
+        # network is of type nsa.Network
         if network.name in [ n.name for n in self.networks ]:
             raise error.TopologyError('Network name must be unique (name: %s)' % network.name)
 
