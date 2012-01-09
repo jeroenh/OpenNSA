@@ -35,8 +35,6 @@ GLIF_MANAGED_BY         = ET.QName('{%s}managedBy' % GLIF_PREFIX)
 GLIF_PROVIDER_ENDPOINT  = ET.QName('{%s}csProviderEndpoint' % GLIF_PREFIX)
 
 
-
-
 class Topology:
 
     def __init__(self):
@@ -335,13 +333,16 @@ def parseGOLERDFTopology(topology_source):
     RDF_NS = rdflib.namespace.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
     DTOX_NS = rdflib.namespace.Namespace('http://www.glif.is/working-groups/tech/dtox#')
 
-    graph = rdflib.ConjunctiveGraph()
+    graph = rdflib.Graph(store="Sleepycat")
+    # TODO: Change this to some configurable option.
+    graph.open("/Users/jeroen/Projects/OpenNSA-UvA/opennsa/rdfdb")
     try:
         graph.parse(topology_source)
     except:
         raise error.TopologyError('Invalid topology source')
 
     topo = Topology()
+    topo.graph = graph
 
     for nsnetwork in graph.subjects(RDF_NS['type'],DTOX_NS['NSNetwork']):
         # Setup the base network object, with NSA
