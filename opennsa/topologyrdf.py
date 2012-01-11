@@ -17,6 +17,7 @@ OWL_NS = rdflib.namespace.Namespace("http://www.w3.org/2002/07/owl#")
 RDF_NS = rdflib.namespace.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
 DTOX_NS = rdflib.namespace.Namespace('http://www.glif.is/working-groups/tech/dtox#')
 
+
 class Topology(object):
     """
     TopologyRDF is an RDF-db based substitute for the regular Topology object.
@@ -38,13 +39,15 @@ class Topology(object):
     
     def getEndpoint(self, network, endpoint):
         """docstring for getEndpoint"""
-        raise NotImplementedError
+        network = self.getNetwork(network)
+        return network.getEndpoint(endpoint)
+        
     def convertSDPRouteToLinks(self, source_ep,dest_ep,route):
         """docstring for convertSDPRouteToLinks"""
-        raise NotImplementedError
+        raise NotImplementedError("Topology.convertSDPRouteToLinks is not implemented")
     def findPaths(self, source_stp, dest_stp, bandwidth=None):
         """docstring for findPaths"""
-        raise NotImplementedError
+        raise NotImplementedError("Topology.findPaths is not implemented")
     # def _pruneMismatchedPorts(self, network_paths):
     #         """docstring for _pruneMismatchedPorts"""
     #     pass
@@ -82,9 +85,11 @@ class Network(RDFObject):
         nsaID = self.graph.value(subject=uri, predicate=DTOX_NS.managedBy)
         self.nsa = NetworkServiceAgent(nsaID,self.graph)
     def addEndpoint(self,endpoint):
-        raise NotImplementedError
+        raise NotImplementedError("Network.addEndpoint is not implemented")
     def getEndpoint(self, endpoint_name):
-        raise NotImplementedError
+        endpoint_uri = self.graph.value(subject=self.uri, predicate=DTOX_NS.hasSTP)
+        return NetworkEndpoint(endpoint_uri, self.graph, self)
+        raise NotImplementedError("Network.getEndpoint is not implemented")
 
 class NetworkServiceAgent(RDFObject):
     """Wrapper class for NetworkServiceAgent"""
@@ -93,36 +98,36 @@ class NetworkServiceAgent(RDFObject):
         self.identity = self.uri[20:]
         self.endpoint = graph.value(subject=uri, predicate=DTOX_NS.csProviderEndpoint)
     def getHostPort(self):
-        raise NotImplementedError
+        raise NotImplementedError("NetworkServiceAgent.getHostPort is not implemented")
     def url(self):
-        raise NotImplementedError
+        raise NotImplementedError("NetworkServiceAgent.url is not implemented")
 
 class STP(RDFObject):
     """Wrapper class for STP"""
-    def __init__(self, uri, graph,network, endpoint):
+    def __init__(self, uri, graph, network):
+    # def __init__(self, uri, graph,network, endpoint):
         super(STP, self).__init__(uri, graph)
-        self.uri = uri
-        self.network = network
-        self.endpoint = endpoint
+        self.network = network.name
+        # self.endpoint = endpoint
     def __eq__(self, other):
-        raise NotImplementedError
+        raise NotImplementedError("STP.__eq__ is not implemented")
         # if not isinstance(other, STP):
         #     return False
         # return self.network == other.network and self.endpoint == other.endpoint
 
 class NetworkEndpoint(STP):
     """Wrapper class for NetworkEndpoint"""
-    def __init__(self, uri, graph, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
-        super(NetworkEndpoint, self).__init__(uri,graph)
-        self.uri = uri
-        self.network = network
-        self.endpoint = endpoint
-        self.nrm_port = nrm_port
-        self.dest_stp = dest_stp
-        self.max_capacity = max_capacity
-        self.available_capacity = available_capacity
+    def __init__(self, uri, graph, network):
+        super(NetworkEndpoint, self).__init__(uri, graph, network)
+        # def __init__(self, uri, graph, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
+        # self.network = network.name
+        # self.endpoint = endpoint
+        # self.nrm_port = nrm_port
+        # self.dest_stp = dest_stp
+        # self.max_capacity = max_capacity
+        # self.available_capacity = available_capacity
     def nrmPort(self):
-        raise NotImplementedError
+        return self.graph.value(subject=self.uri,predicate=DTOX_NS.mapsTo)
     # def __str__(self):
     #         return '<NetworkEndpoint %s:%s-%s#%s>' % (self.network, self.endpoint, self.dest_stp, self.nrm_port)
 
