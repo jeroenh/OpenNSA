@@ -150,7 +150,7 @@ class NSIService:
                     self.setupSubConnection(link.stp1, link.stp2, conn, service_parameters)
 
         except Exception, e:
-            log.msg('Error setting up connection: %s' % str(e), system=LOG_SYSTEM)
+            log.msg('Error setting up connection: %s, %s' % (type(e).__name__, str(e)), system=LOG_SYSTEM)
             return defer.fail(e)
 
         def logReserve(conn):
