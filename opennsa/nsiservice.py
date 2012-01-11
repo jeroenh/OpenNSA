@@ -152,6 +152,7 @@ class NSIService:
 
         except Exception, e:
             log.msg('Error setting up connection: %s, %s' % (type(e).__name__, str(e)), system=LOG_SYSTEM)
+            raise
             return defer.fail(e)
 
         def logReserve(conn):
