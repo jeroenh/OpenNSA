@@ -38,13 +38,13 @@ class Topology(object):
     
     def getEndpoint(self, network, endpoint):
         """docstring for getEndpoint"""
-        pass
+        raise NotImplementedError
     def convertSDPRouteToLinks(self, source_ep,dest_ep,route):
         """docstring for convertSDPRouteToLinks"""
-        pass
+        raise NotImplementedError
     def findPaths(self, source_stp, dest_stp, bandwidth=None):
         """docstring for findPaths"""
-        pass
+        raise NotImplementedError
     # def _pruneMismatchedPorts(self, network_paths):
     #         """docstring for _pruneMismatchedPorts"""
     #     pass
@@ -82,9 +82,9 @@ class Network(RDFObject):
         nsaID = self.graph.value(subject=uri, predicate=DTOX_NS.managedBy)
         self.nsa = NetworkServiceAgent(nsaID,self.graph)
     def addEndpoint(self,endpoint):
-        raise NotImplemented
+        raise NotImplementedError
     def getEndpoint(self, endpoint_name):
-        raise NotImplemented
+        raise NotImplementedError
 
 class NetworkServiceAgent(RDFObject):
     """Wrapper class for NetworkServiceAgent"""
@@ -93,9 +93,9 @@ class NetworkServiceAgent(RDFObject):
         self.identity = self.uri[20:]
         self.endpoint = graph.value(subject=uri, predicate=DTOX_NS.csProviderEndpoint)
     def getHostPort(self):
-        raise NotImplemented
+        raise NotImplementedError
     def url(self):
-        raise NotImplemented
+        raise NotImplementedError
 
 class STP(RDFObject):
     """Wrapper class for STP"""
@@ -105,14 +105,14 @@ class STP(RDFObject):
         self.network = network
         self.endpoint = endpoint
     def __eq__(self, other):
-        raise NotImplemented
+        raise NotImplementedError
         # if not isinstance(other, STP):
         #     return False
         # return self.network == other.network and self.endpoint == other.endpoint
 
 class NetworkEndpoint(STP):
     """Wrapper class for NetworkEndpoint"""
-    def __init__(self, uri, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
+    def __init__(self, uri, graph, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
         super(NetworkEndpoint, self).__init__(uri,graph)
         self.uri = uri
         self.network = network
@@ -122,7 +122,7 @@ class NetworkEndpoint(STP):
         self.max_capacity = max_capacity
         self.available_capacity = available_capacity
     def nrmPort(self):
-        raise NotImplemented
+        raise NotImplementedError
     # def __str__(self):
     #         return '<NetworkEndpoint %s:%s-%s#%s>' % (self.network, self.endpoint, self.dest_stp, self.nrm_port)
 
