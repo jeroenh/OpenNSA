@@ -78,10 +78,16 @@ class ProviderService:
         sp                          = res.serviceParameters
         path                        = res.path
 
+        # def parseSTPID(stp_id):
+        #     tokens = stp_id.replace(nsa.STP_PREFIX, '').split(':', 2)
+        #     return nsa.STP(tokens[0], tokens[1])
+        # TODO: Find better solution:
         def parseSTPID(stp_id):
-            tokens = stp_id.replace(nsa.STP_PREFIX, '').split(':', 2)
-            return nsa.STP(tokens[0], tokens[1])
-
+            if not stp_id.startswith("urn:ogf:network:stp:"):
+                print "fixing %s" % stp_id
+                stp_id = "urn:ogf:network:stp:" + stp_id
+            return str(stp_id)
+        
         source_stp  = parseSTPID(path.sourceSTP.stpId)
         dest_stp    = parseSTPID(path.destSTP.stpId)
         # how to check for existence of optional parameters easily  - in / hasattr both works

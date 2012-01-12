@@ -13,9 +13,11 @@ def reserve(client, client_nsa, provider_nsa, source_stp, dest_stp, start_time, 
     source_network, source_port = source_stp.split(':',1)
     dest_network,   dest_port   = dest_stp.split(':', 1)
 
-    r_source_stp    = nsa.STP(source_network, source_port)
-    r_dest_stp      = nsa.STP(dest_network,   dest_port)
-
+    # r_source_stp    = nsa.STP(source_network, source_port)
+    # r_dest_stp      = nsa.STP(dest_network,   dest_port)
+    r_source_stp = "urn:ogf:network:stp:" + source_stp
+    r_dest_stp = "urn:ogf:network:stp:" + dest_stp
+    
     bwp = nsa.BandwidthParameters(bandwidth)
     service_params  = nsa.ServiceParameters(start_time, end_time, r_source_stp, r_dest_stp, bandwidth=bwp)
 
