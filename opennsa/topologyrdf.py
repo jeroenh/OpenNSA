@@ -9,14 +9,13 @@ Copyright: University of Amsterdam (2012)
 import json
 import rdflib
 
-from opennsa import nsa, error
+from opennsa import nsa, error, dijkstra
 
 
 # Constants for parsing GOLE topology format
 OWL_NS = rdflib.namespace.Namespace("http://www.w3.org/2002/07/owl#")
 RDF_NS = rdflib.namespace.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
 DTOX_NS = rdflib.namespace.Namespace('http://www.glif.is/working-groups/tech/dtox#')
-
 
 class Topology(object):
     """
@@ -36,7 +35,6 @@ class Topology(object):
             return Network(networkURI,self.graph)
         else:
             raise error.TopologyError('No network named %s (%s)' % (network_name,networkURI))
-    
     def getEndpoint(self, network, endpoint):
         """docstring for getEndpoint"""
         network = self.getNetwork(network)
@@ -47,7 +45,9 @@ class Topology(object):
         raise NotImplementedError("Topology.convertSDPRouteToLinks is not implemented")
     def findPaths(self, source_stp, dest_stp, bandwidth=None):
         """docstring for findPaths"""
-        raise NotImplementedError("Topology.findPaths is not implemented")
+        d = dijkstra.Dijkstra(self.graph)
+        print "Source: %s is of type %s from %s" % (source_stp,type(source_stp),source_stp.__module__)
+        return d.findShortestPath(str(source_stp.uri), str(dest_stp.uri), bandwidth)
     # def _pruneMismatchedPorts(self, network_paths):
     #         """docstring for _pruneMismatchedPorts"""
     #     pass
@@ -89,31 +89,30 @@ class Network(RDFObject):
     def getEndpoint(self, endpoint_name):
         endpoint_uri = self.graph.value(subject=self.uri, predicate=DTOX_NS.hasSTP)
         return NetworkEndpoint(endpoint_uri, self.graph, self)
-        raise NotImplementedError("Network.getEndpoint is not implemented")
 
 class NetworkServiceAgent(RDFObject):
     """Wrapper class for NetworkServiceAgent"""
     def __init__(self, uri, graph):
         super(NetworkServiceAgent, self).__init__(uri, graph)
         self.identity = self.uri[20:]
-        self.endpoint = graph.value(subject=uri, predicate=DTOX_NS.csProviderEndpoint)
+        # self.endpoint = graph.value(subject=uri, predicate=DTOX_NS.csProviderEndpoint)
     def getHostPort(self):
         raise NotImplementedError("NetworkServiceAgent.getHostPort is not implemented")
     def url(self):
+        return self.graph.value(subject=self.uri, predicate=DTOX_NS.csProviderEndpoint)
         raise NotImplementedError("NetworkServiceAgent.url is not implemented")
 
 class STP(RDFObject):
     """Wrapper class for STP"""
     def __init__(self, uri, graph, network):
-    # def __init__(self, uri, graph,network, endpoint):
+    # def __init__(self, uri, graph, network, endpoint):
         super(STP, self).__init__(uri, graph)
         self.network = network.name
         # self.endpoint = endpoint
     def __eq__(self, other):
-        raise NotImplementedError("STP.__eq__ is not implemented")
-        # if not isinstance(other, STP):
-        #     return False
-        # return self.network == other.network and self.endpoint == other.endpoint
+        if not isinstance(other, STP):
+            return False
+        return self.uri == other.uri
 
 class NetworkEndpoint(STP):
     """Wrapper class for NetworkEndpoint"""
@@ -151,25 +150,26 @@ def parseGOLETopology(topology_source):
 
     topo = Topology(graph)
 
-    for nsnetwork in graph.subjects(RDF_NS['type'],DTOX_NS['NSNetwork']):
-        # Setup the base network object, with NSA
-        nsaId = graph.value(subject=nsnetwork, predicate=DTOX_NS['managedBy'])
-        network_name = stripURNPrefix(str(nsnetwork))
-        network_nsa_ep = graph.value(subject=nsaId, predicate=DTOX_NS['csProviderEndpoint'])
-        network_nsa = nsa.NetworkServiceAgent(stripURNPrefix(str(nsaId)), str(network_nsa_ep))
-        network = nsa.Network(network_name, network_nsa)
-
-        # Add all the STPs and connections to the network
-        for stp in graph.objects(nsnetwork, DTOX_NS['hasSTP']):
-            stp_name = stripURNPrefix(str(stp))
-            dest_stp = graph.value(subject=stp, predicate=DTOX_NS['connectedTo'])
-            # If there is a destination, add that, otherwise the value stays None.
-            if dest_stp:
-                dest_network = graph.value(predicate=DTOX_NS['hasSTP'], object=dest_stp)
-                dest_stp = nsa.STP(stripURNPrefix(str(dest_network)), stripURNPrefix(str(dest_stp)))
-            ep = nsa.NetworkEndpoint(network_name, stp_name, None, dest_stp, None, None)
-            network.addEndpoint(ep)
-
-        topo.addNetwork(network)
+    # Objects are created on the fly.
+    
+    # for nsnetwork in graph.subjects(RDF_NS['type'],DTOX_NS['NSNetwork']):
+    #         # Setup the base network object, with NSA
+    #         nsaId = graph.value(subject=nsnetwork, predicate=DTOX_NS['managedBy'])
+    #         network_nsa_ep = graph.value(subject=nsaId, predicate=DTOX_NS['csProviderEndpoint'])
+    #         network_nsa = NetworkServiceAgent(nsaId, graph)
+    #         network = Network(nsnetwork, graph)
+    # 
+    #         # Add all the STPs and connections to the network
+    #         for stp in graph.objects(nsnetwork, DTOX_NS['hasSTP']):
+    #             # stp_name = stripURNPrefix(str(stp))
+    #             dest_stp = graph.value(subject=stp, predicate=DTOX_NS['connectedTo'])
+    #             # If there is a destination, add that, otherwise the value stays None.
+    #             if dest_stp:
+    #                 dest_network = graph.value(predicate=DTOX_NS['hasSTP'], object=dest_stp)
+    #                 dest_stp = STP(dest_dest_stp, graph, dest_network)
+    #             ep = NetworkEndpoint(stp, graph, network)
+    #             network.addEndpoint(ep)
+    # 
+    #         topo.addNetwork(network)
 
     return topo
