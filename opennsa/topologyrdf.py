@@ -57,7 +57,6 @@ class Topology(object):
     def findPath(self, source_stp, dest_stp, bandwidth=None):
         """docstring for findPaths"""
         d = dijkstra.Dijkstra(self.graph)
-        print "Source: %s is of type %s from %s" % (source_stp,type(source_stp),source_stp.__module__)
         return d.findShortestPath(str(source_stp.uri), str(dest_stp.uri), bandwidth)
     # def _pruneMismatchedPorts(self, network_paths):
     #         """docstring for _pruneMismatchedPorts"""
@@ -98,8 +97,8 @@ class Network(RDFObject):
     def addEndpoint(self,endpoint):
         raise NotImplementedError("Network.addEndpoint is not implemented")
     def getEndpoint(self, endpoint_name):
-        endpoint_uri = self.graph.value(subject=self.uri, predicate=DTOX_NS.hasSTP)
-        return NetworkEndpoint(endpoint_uri, self.graph, self)
+        if (self.uri, DTOX_NS.hasSTP, rdflib.URIRef(endpoint_name)) in self.graph:
+            return NetworkEndpoint(endpoint_name, self.graph, self)
 
 class NetworkServiceAgent(RDFObject):
     """Wrapper class for NetworkServiceAgent"""
