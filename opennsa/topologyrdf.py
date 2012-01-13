@@ -109,7 +109,7 @@ class NetworkServiceAgent(RDFObject):
     def getHostPort(self):
         raise NotImplementedError("NetworkServiceAgent.getHostPort is not implemented")
     def url(self):
-        return self.graph.value(subject=self.uri, predicate=DTOX_NS.csProviderEndpoint)
+        return str(self.graph.value(subject=self.uri, predicate=DTOX_NS.csProviderEndpoint))
         raise NotImplementedError("NetworkServiceAgent.url is not implemented")
 
 class STP(RDFObject):

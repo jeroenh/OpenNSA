@@ -65,7 +65,7 @@ class NSIService:
         else:
             sub_conn_id = 'urn:uuid:' + str(uuid.uuid1())
             remote_nsa = self.topology.getNetwork(source_ep.network).nsa
-            sub_conn = connection.SubConnection(self.client, self.nsa, remote_nsa, conn, sub_conn_id, source_ep, dest_ep, sub_sps)
+            sub_conn = connection.SubConnection(self.client, self.nsa, remote_nsa, conn, sub_conn_id, str(source_ep.uri), str(dest_ep.uri), sub_sps)
 
         conn.sub_connections.append(sub_conn)
 
@@ -148,16 +148,16 @@ class NSIService:
 
                 # for link in selected_path.links():
                 #     self.setupSubConnection(link.stp1, link.stp2, conn, service_parameters)
-                selected_path = [self.topology.getEndpoint1(x) for x in selected_path]
-                print "Path: %s" % str([x.uri for x in selected_path])
-                hopSrc = selected_path[0]
-                for hopDst in selected_path[1:]:
+                path_objects = [self.topology.getEndpoint1(x) for x in selected_path]
+                print "Path: %s" % str([x.uri for x in path_objects])
+                hopSrc = path_objects[0]
+                for hopDst in path_objects[1:]:
                     if hopSrc.network == hopDst.network:
                         print "Making SubCon (%s,%s)"% (hopSrc,hopDst)
                         self.setupSubConnection(hopSrc, hopDst, conn, service_parameters)
                     hopSrc = hopDst
-                if selected_path[-2].network != selected_path[-1].network:
-                    self.setupSubConnection(selected_path[-1], selected_path[-1], conn, service_parameters)
+                if path_objects[-2].network != path_objects[-1].network:
+                    self.setupSubConnection(path_objects[-1], path_objects[-1], conn, service_parameters)
 
         except Exception, e:
             log.msg('Error setting up connection: %s, %s' % (type(e).__name__, str(e)), system=LOG_SYSTEM)
@@ -216,6 +216,7 @@ class NSIService:
             return defer.fail(e)
         except Exception, e:
             log.msg('Unexpected error during provision: %s' % str(e), system=LOG_SYSTEM)
+            raise
             return defer.fail(e)
 
 
