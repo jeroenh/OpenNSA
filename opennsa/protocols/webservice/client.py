@@ -169,8 +169,8 @@ class RequesterClient:
         res_conf.reservation.serviceParameters.bandwidth.maximum      = service_parameters.bandwidth.maximum
 
         res_conf.reservation.path.directionality  = service_parameters.directionality
-        res_conf.reservation.path.sourceSTP.stpId = service_parameters.source_stp.urn()
-        res_conf.reservation.path.destSTP.stpId   = service_parameters.dest_stp.urn()
+        res_conf.reservation.path.sourceSTP.stpId = service_parameters.source_stp
+        res_conf.reservation.path.destSTP.stpId   = service_parameters.dest_stp
 
         d = self.client.invoke(requester_uri, 'reserveConfirmed', correlation_id, res_conf)
         return d
@@ -293,8 +293,8 @@ class RequesterClient:
                 qsr.connectionId        = conn.connection_id
                 qsr.connectionState     = conn.state()
 
-                qsr.path.sourceSTP.stpId    = conn.source_stp.urn()
-                qsr.path.destSTP.stpId      = conn.dest_stp.urn()
+                qsr.path.sourceSTP.stpId    = conn.source_stp
+                qsr.path.destSTP.stpId      = conn.dest_stp
 
                 qsr.serviceParameters.schedule.startTime = utcTime(conn.service_parameters.start_time)
                 qsr.serviceParameters.schedule.endTime   = utcTime(conn.service_parameters.end_time)
@@ -305,7 +305,7 @@ class RequesterClient:
 
                 def createOrderedSTP(stp, rank):
                     ostp = self.client.createType('{http://schemas.ogf.org/nsi/2011/10/connection/types}OrderedServiceTerminationPointType')
-                    ostp.stpId = stp.urn()
+                    ostp.stpId = stp
                     ostp._order = rank
                     return ostp
 
