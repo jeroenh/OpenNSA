@@ -99,8 +99,8 @@ class NSIService:
                 log.msg('Connection %s: Simple path creation: %s:%s -> %s:%s (%s)' % path_info, system=LOG_SYSTEM)
 
                 # we need to resolve this from our topology in order to get any local configuration
-                source_ep = self.topology.getEndpoint(self.network, source_stp.endpoint)
-                dest_ep   = self.topology.getEndpoint(self.network, dest_stp.endpoint)
+                source_ep = self.topology.getEndpoint(self.network, source_stp.uri)
+                dest_ep   = self.topology.getEndpoint(self.network, dest_stp.uri)
                 self.setupSubConnection(source_ep, dest_ep, conn, service_parameters)
 
         # This code is for chaining requests and is currently not used, but might be needed sometime in the future

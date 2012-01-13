@@ -99,6 +99,8 @@ class Network(RDFObject):
     def getEndpoint(self, endpoint_name):
         if (self.uri, DTOX_NS.hasSTP, rdflib.URIRef(endpoint_name)) in self.graph:
             return NetworkEndpoint(endpoint_name, self.graph, self)
+        else:
+            raise Exception("Unknown Endpoint %s in Network %s" % (endpoint_name, self))
 
 class NetworkServiceAgent(RDFObject):
     """Wrapper class for NetworkServiceAgent"""
@@ -131,7 +133,7 @@ class NetworkEndpoint(STP):
         # def __init__(self, uri, graph, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
         # self.network = network.name
         # TODO
-        self.endpoint = None
+        self.endpoint = self.uri.split(":")[-1]
         # self.nrm_port = nrm_port
         # self.dest_stp = dest_stp
         # self.max_capacity = max_capacity
