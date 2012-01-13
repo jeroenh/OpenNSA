@@ -30,7 +30,10 @@ class Topology(object):
         # Network has already been parsed into the DB, no need to add.
         pass
     def getNetwork(self,network_name):
-        networkURI = rdflib.URIRef("urn:ogf:network:nsnetwork:"+network_name)
+        if not network_name.startswith("urn:ogf:network:nsnetwork:"):
+            networkURI = rdflib.URIRef("urn:ogf:network:nsnetwork:"+network_name)
+        else:
+            networkURI = network_name
         if (networkURI,RDF_NS.type,DTOX_NS.NSNetwork) in self.graph:
             return Network(networkURI,self.graph)
         else:
@@ -39,11 +42,19 @@ class Topology(object):
         """docstring for getEndpoint"""
         network = self.getNetwork(network)
         return network.getEndpoint(endpoint)
+    def getEndpoint1(self, endpoint):
+        endpoint = rdflib.URIRef(endpoint)
+        if (endpoint, RDF_NS.type, DTOX_NS.STP) in self.graph:
+            network = self.graph.value(predicate=DTOX_NS.hasSTP, object=endpoint)
+            return self.getEndpoint(network,endpoint)
+        else:
+            raise Exception("Unknown Endpoint %s" % endpoint)
+        
         
     def convertSDPRouteToLinks(self, source_ep,dest_ep,route):
         """docstring for convertSDPRouteToLinks"""
         raise NotImplementedError("Topology.convertSDPRouteToLinks is not implemented")
-    def findPaths(self, source_stp, dest_stp, bandwidth=None):
+    def findPath(self, source_stp, dest_stp, bandwidth=None):
         """docstring for findPaths"""
         d = dijkstra.Dijkstra(self.graph)
         print "Source: %s is of type %s from %s" % (source_stp,type(source_stp),source_stp.__module__)
@@ -120,13 +131,15 @@ class NetworkEndpoint(STP):
         super(NetworkEndpoint, self).__init__(uri, graph, network)
         # def __init__(self, uri, graph, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
         # self.network = network.name
-        # self.endpoint = endpoint
+        # TODO
+        self.endpoint = None
         # self.nrm_port = nrm_port
         # self.dest_stp = dest_stp
         # self.max_capacity = max_capacity
         # self.available_capacity = available_capacity
     def nrmPort(self):
-        return self.graph.value(subject=self.uri,predicate=DTOX_NS.mapsTo)
+        return self.uri.split(":")[-1]
+        # return self.graph.value(subject=self.uri,predicate=DTOX_NS.mapsTo)
     # def __str__(self):
     #         return '<NetworkEndpoint %s:%s-%s#%s>' % (self.network, self.endpoint, self.dest_stp, self.nrm_port)
 

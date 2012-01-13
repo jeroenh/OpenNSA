@@ -139,15 +139,25 @@ class NSIService:
                 # log about creation and the connection type
                 log.msg('Connection %s: Aggregate path creation: %s:%s -> %s:%s (%s)' % path_info, system=LOG_SYSTEM)
                 # making the connection is the same for all though :-)
-                paths = self.topology.findPaths(source_stp, dest_stp)
+                selected_path = self.topology.findPath(source_stp, dest_stp)
 
                 # check for no paths
-                paths.sort(key=lambda e : len(e.links()))
-                selected_path = paths[0] # shortest path
+                # paths.sort(key=lambda e : len(e.links()))
+                # selected_path = paths[0] # shortest path
                 log.msg('Attempting to create path %s' % selected_path, system=LOG_SYSTEM)
 
-                for link in selected_path.links():
-                    self.setupSubConnection(link.stp1, link.stp2, conn, service_parameters)
+                # for link in selected_path.links():
+                #     self.setupSubConnection(link.stp1, link.stp2, conn, service_parameters)
+                selected_path = [self.topology.getEndpoint1(x) for x in selected_path]
+                print "Path: %s" % str([x.uri for x in selected_path])
+                hopSrc = selected_path[0]
+                for hopDst in selected_path[1:]:
+                    if hopSrc.network == hopDst.network:
+                        print "Making SubCon (%s,%s)"% (hopSrc,hopDst)
+                        self.setupSubConnection(hopSrc, hopDst, conn, service_parameters)
+                    hopSrc = hopDst
+                if selected_path[-2].network != selected_path[-1].network:
+                    self.setupSubConnection(selected_path[-1], selected_path[-1], conn, service_parameters)
 
         except Exception, e:
             log.msg('Error setting up connection: %s, %s' % (type(e).__name__, str(e)), system=LOG_SYSTEM)

@@ -10,14 +10,18 @@ import rdflib
 
 DTOX_NS = rdflib.namespace.Namespace('http://www.glif.is/working-groups/tech/dtox#')
 
+# To Infinity and Beyond!
+# (Actually can't think of another way to define infinity on a computer.)
+infinity = "infinity"
+
 class Dijkstra(object):
     def __init__(self, graph):
         self.graph = graph
 
     def getNeighbors(self, cp):
-        network = self.graph.value(predicate=DTOX_NS.hasSTP,object=cp.uri)
-        stps = [str(x) for x in self.graph.objects(subject=network,predicate=DTOX_NSA.hasSTP)]
-        connected = str(self.graph.value(subject=cp.uri,predicate=DTOX_NS.connectedTo))
+        network = self.graph.value(predicate=DTOX_NS.hasSTP,object=rdflib.URIRef(cp))
+        stps = [str(x) for x in self.graph.objects(subject=network,predicate=DTOX_NS.hasSTP)]
+        connected = str(self.graph.value(subject=rdflib.URIRef(cp),predicate=DTOX_NS.connectedTo))
         stps.append(connected)
         return stps
     def findShortestPath(self, src=None, dst=None, bandwidth=None):
@@ -37,3 +41,8 @@ class Dijkstra(object):
                         if not m == infinity:
                             heapq.heappush(q, (cost+m, v2, path))
         return None
+
+    def getMetric(self, source, target, bandwidth=None):
+        # TODO: All kinds of funky metric magic possibly taking bandwidth into account
+        # Possible to return "infinity" if you have no bandwidth for example.
+        return 1
