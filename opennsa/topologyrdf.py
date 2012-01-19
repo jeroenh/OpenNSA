@@ -6,7 +6,6 @@ Author: Jeroen van der Ham <vdham@uva.nl
 Copyright: University of Amsterdam (2012)
 """
 
-import json
 import rdflib
 
 from opennsa import nsa, error, dijkstra
@@ -144,7 +143,7 @@ class NetworkEndpoint(STP):
     # def __str__(self):
     #         return '<NetworkEndpoint %s:%s-%s#%s>' % (self.network, self.endpoint, self.dest_stp, self.nrm_port)
 
-def parseGOLETopology(topology_source):
+def parseGOLETopology(topology_source,reload_source=False):
     def stripURNPrefix(text):
         URN_PREFIX = 'urn:ogf:network:'
         assert text.startswith(URN_PREFIX)
@@ -157,10 +156,11 @@ def parseGOLETopology(topology_source):
     graph = rdflib.Graph(store="Sleepycat")
     # TODO: Change this to some configurable option.
     graph.open("/Users/jeroen/Projects/OpenNSA-UvA/opennsa/rdfdb")
-    try:
-        graph.parse(topology_source)
-    except:
-        raise error.TopologyError('Invalid topology source')
+    if reload_source:
+        try:
+            graph.parse(topology_source)
+        except:
+            raise error.TopologyError('Invalid topology source')
 
     topo = Topology(graph)
 
