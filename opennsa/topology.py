@@ -323,7 +323,7 @@ def parseGOLETopology(topology_source):
 
 
 def parseGOLERDFTopology(topology_source):
-
+    import rdflib
     def stripURNPrefix(text):
         URN_PREFIX = 'urn:ogf:network:'
         assert text.startswith(URN_PREFIX)
