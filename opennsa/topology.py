@@ -40,7 +40,7 @@ STP_PREFIX       = 'urn:ogf:network:stp:'
 
 
 def _stripPrefix(text, prefix):
-    assert text.startswith(prefix), 'Text did not start with specified prefix'
+    assert text.startswith(prefix), 'Text %s did not start with specified prefix' % text
     ul = len(prefix)
     return text[ul:]
 
@@ -344,8 +344,8 @@ def parseGOLERDFTopology(topology_sources):
     try:
         for source, format_ in topology_sources:
             graph.parse(source, format=format_)
-    except Exception, e:
-        raise error.TopologyError('Error parsing topology source: %s' % str(e))
+    except Exception as e:
+        raise error.TopologyError('Error parsing topology source: %s' % e)
 
     topo = Topology()
 
