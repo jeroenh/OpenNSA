@@ -1,14 +1,15 @@
 """
 Core abstractions used in OpenNSA.
 
+In design pattern terms, these would be Data Transfer Objects (DTOs).
+Though some of them do actually have some functionality methods.
+
 Author: Henrik Thostrup Jensen <htj@nordu.net>
 Copyright: NORDUnet (2011)
 """
 
 
 import urlparse
-
-from twisted.python import log
 
 from opennsa import error
 
@@ -24,6 +25,8 @@ LOG_SYSTEM = 'opennsa.nsa'
 class STP: # Service Termination Point
 
     def __init__(self, network, endpoint):
+        assert type(network) is str, 'Invalid network type provided for STP initialization'
+        assert type(endpoint) is str, 'Invalid endpoint type provided for STP initialization'
         self.network = network
         self.endpoint = endpoint
 
@@ -104,7 +107,7 @@ class Path:
 
 
     def __str__(self):
-        return ' - '.join( [ str(nl) for nl in self.network_links ] )
+        return '<Path: ' + ' '.join( [ str(nl) for nl in self.network_links ] ) + '>'
 
 
 
@@ -112,8 +115,8 @@ class NetworkEndpoint(STP):
 
     def __init__(self, network, endpoint, nrm_port=None, dest_stp=None, max_capacity=None, available_capacity=None):
         STP.__init__(self, network, endpoint)
-        if nrm_port is None:
-            log.msg('Warning: NRM Port for %s is undefined' % endpoint)
+        if nrm_port is not None:
+            assert type(nrm_port) is str, 'Invalid nrm_port type provided for NetworkEndpoint initialization'
         self.nrm_port = nrm_port
         self.dest_stp = dest_stp
         self.max_capacity = max_capacity
@@ -121,10 +124,8 @@ class NetworkEndpoint(STP):
 
 
     def nrmPort(self):
-        if self.nrm_port:
-            return self.nrm_port
-        else:
-            return self.endpoint
+        assert self.nrm_port is not None, 'No NRM port defined for NetworkEndpoint %s' % str(self)
+        return self.nrm_port
 
 
     def __str__(self):

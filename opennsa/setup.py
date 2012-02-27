@@ -8,7 +8,7 @@ from ConfigParser import NoOptionError
 from twisted.python.log import ILogObserver
 from twisted.application import internet, service as appservice
 
-from opennsa import config, logging, nsiservice
+from opennsa import config, logging, registry, topology, nsiservice
 from opennsa.protocols.webservice import client, service, provider, requester, resource
 
 
@@ -31,7 +31,8 @@ def _createServiceURL(host, port, ctx_factory=None):
 
 
 
-def createService(network_name, topology_sources, backend, host, port, wsdl_dir, ctx_factory=None):
+def createService(network_name, topology_sources, backend, service_registry, host, port, wsdl_dir, ctx_factory=None, nrm_map_source=None):
+
 
     # reminds an awful lot about client setup
 
@@ -44,10 +45,11 @@ def createService(network_name, topology_sources, backend, host, port, wsdl_dir,
 
     # now provider service
 
-    nsi_service  = nsiservice.NSIService(network_name, backend, topology_sources, nsi_requester)
+    topo = topology.parseTopology(topology_sources, nrm_map_source)
+    nsi_service  = nsiservice.NSIService(network_name, backend, service_registry, topo, nsi_requester)
 
     requester_client = client.RequesterClient(wsdl_dir, ctx_factory)
-    nsi_provider = provider.Provider(nsi_service, requester_client)
+    nsi_provider = provider.Provider(service_registry, requester_client)
     service.ProviderService(nsi_resource, nsi_provider, wsdl_dir)
 
     return site
@@ -67,7 +69,7 @@ def createClient(host, port, wsdl_dir, ctx_factory=None):
 
 
 
-def createApplication(config_file=config.DEFAULT_CONFIG_FILE, tls=True, authz_verify=True, debug=False):
+def createApplication(config_file=config.DEFAULT_CONFIG_FILE, authz_verify=True, debug=False):
 
     cfg = config.readConfig(config_file)
 
@@ -78,7 +80,7 @@ def createApplication(config_file=config.DEFAULT_CONFIG_FILE, tls=True, authz_ve
 
     log_file_path = cfg.get(config.BLOCK_SERVICE, config.CONFIG_LOG_FILE)
     if log_file_path:
-        log_file = open(log_file_path, 'w')
+        log_file = open(log_file_path, 'a')
     else:
         import sys
         log_file = sys.stdout
@@ -88,7 +90,16 @@ def createApplication(config_file=config.DEFAULT_CONFIG_FILE, tls=True, authz_ve
     for topology_file in topology_files:
         if not os.path.exists(topology_file):
             raise ConfigurationError('Specified (or default) topology file does not exist (%s)' % topology_file)
-    topology_sources = [ (open(tf), 'n3' if tf.endswith('.n3') else 'xml' ) for tf in topology_files ]
+    topology_sources = [ open(tf) for tf in topology_files ]
+
+    try:
+        nrm_map_file = cfg.get(config.BLOCK_SERVICE, config.CONFIG_NRM_MAP_FILE)
+        if not os.path.exists(nrm_map_file):
+            raise ConfigurationError('Specified NRM mapping file does not exist (%s)' % nrm_map_file)
+        nrm_map_source = open(nrm_map_file)
+    except NoOptionError:
+        nrm_map_source = None
+
 
     wsdl_dir = cfg.get(config.BLOCK_SERVICE, config.CONFIG_WSDL_DIRECTORY)
     if not os.path.exists(wsdl_dir):
@@ -101,21 +112,38 @@ def createApplication(config_file=config.DEFAULT_CONFIG_FILE, tls=True, authz_ve
         host = socket.getfqdn() # this a guess
 
     try:
-        port = cfg.get(config.BLOCK_SERVICE, config.CONFIG_PORT)
+        tls = cfg.getboolean(config.BLOCK_SERVICE, config.CONFIG_TLS)
+    except NoOptionError:
+        tls = config.DEFAULT_TLS
+
+    try:
+        port = cfg.getint(config.BLOCK_SERVICE, config.CONFIG_PORT)
     except NoOptionError:
         port = config.DEFAULT_TLS_PORT if tls else config.DEFAULT_TCP_PORT
 
     ctx_factory = None
-    if tls:
-        from opennsa import ctxfactory
+    try:
+        hostkey  = cfg.get(config.BLOCK_SERVICE, config.CONFIG_HOSTKEY)
+        hostcert = cfg.get(config.BLOCK_SERVICE, config.CONFIG_HOSTCERT)
+        certdir  = cfg.get(config.BLOCK_SERVICE, config.CONFIG_CERTIFICATE_DIR)
         try:
-            hostkey  = cfg.get(config.BLOCK_SERVICE, config.CONFIG_HOSTKEY)
-            hostcert = cfg.get(config.BLOCK_SERVICE, config.CONFIG_HOSTCERT)
-            certdir  = cfg.get(config.BLOCK_SERVICE, config.CONFIG_CERTIFICATE_DIR)
-            verify   = cfg.get(config.BLOCK_SERVICE, config.CONFIG_VERIFY)
-            ctx_factory = ctxfactory.ContextFactory(hostkey, hostcert, certdir, verify)
+            verify = cfg.get(config.BLOCK_SERVICE, config.CONFIG_VERIFY)
         except NoOptionError, e:
-            raise ConfigurationError('Missing TLS options (%s)' % str(e))
+            verify = config.DEFAULT_VERIFY
+
+        if not os.path.exists(hostkey):
+            raise ConfigurationError('Specified hostkey does not exists (%s)' % hostkey)
+        if not os.path.exists(hostcert):
+            raise ConfigurationError('Specified hostcert does not exists (%s)' % hostcert)
+        if not os.path.exists(certdir):
+            raise ConfigurationError('Specified certdir does not exists (%s)' % certdir)
+
+        from opennsa import ctxfactory
+        ctx_factory = ctxfactory.ContextFactory(hostkey, hostcert, certdir, verify)
+    except NoOptionError, e:
+        # Not enough options for configuring tls context
+        if tls:
+            raise ConfigurationError('Missing TLS option: %s' % str(e))
 
     # backend
 
@@ -124,18 +152,22 @@ def createApplication(config_file=config.DEFAULT_CONFIG_FILE, tls=True, authz_ve
         backend = dud.DUDNSIBackend(network_name)
     elif config.BLOCK_JUNOS in cfg.sections():
         from opennsa.backends import junos
-        backend = junos.JunOSBackend(network_name)
+        backend = junos.JunOSBackend(network_name, cfg.items(config.BLOCK_JUNOS))
+    elif config.BLOCK_FORCE10 in cfg.sections():
+        from opennsa.backends import force10
+        backend = force10.Force10Backend(network_name, cfg.items(config.BLOCK_FORCE10))
     elif config.BLOCK_ARGIA in cfg.sections():
-        command_dir = cfg.get(config.BLOCK_ARGIA, config.ARGIA_COMMAND_DIR)
-        command_bin = cfg.get(config.BLOCK_ARGIA, config.ARGIA_COMMAND_BIN)
         from opennsa.backends import argia
-        backend = argia.ArgiaBackend(command_dir, command_bin)
+        backend = argia.ArgiaBackend(network_name, cfg.items(config.BLOCK_ARGIA))
     else:
         raise ConfigurationError('No or invalid backend specified')
 
     # setup application
 
-    factory = createService(network_name, topology_sources, backend, host, port, wsdl_dir, ctx_factory)
+
+    service_registry = registry.ServiceRegistry()
+
+    factory = createService(network_name, topology_sources, backend, service_registry, host, port, wsdl_dir, ctx_factory, nrm_map_source)
 
     application = appservice.Application("OpenNSA")
     application.setComponent(ILogObserver, logging.DebugLogObserver(log_file, debug).emit)

@@ -5,6 +5,7 @@ Author: Henrik Thostrup Jensen <htj@nordu.net>
 Copyright: NORDUnet (2011)
 """
 
+import time
 import datetime
 from twisted.python import log
 
@@ -13,8 +14,31 @@ from opennsa.protocols.webservice.ext import sudsservice
 
 from suds.sax import date as sudsdate
 
+
+LOG_SYSTEM = 'webservice.Service'
+
 WSDL_PROVIDER   = 'file://%s/ogf_nsi_connection_provider_v1_0.wsdl'
 WSDL_REQUESTER  = 'file://%s/ogf_nsi_connection_requester_v1_0.wsdl'
+
+# Hack on!
+# Getting SUDS to throw service faults is more or less impossible as it is a client library
+# We do this instead
+SERVICE_FAULT = """<?xml version='1.0' encoding='UTF-8'?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
+        <soap:Fault xmlns:envelope="http://www.w3.org/2003/05/soap-envelope">
+            <faultcode>soap:Server</faultcode>
+            <faultstring>%(error_text)s</faultstring>
+            <detail>
+                <nsi:serviceException xmlns:nsi="http://schemas.ogf.org/nsi/2011/10/connection/interface">
+                    <errorId>%(error_id)s</errorId>
+                    <text>%(error_text)s</text>
+                </nsi:serviceException>
+            </detail>
+        </soap:Fault>
+    </soap:Body>
+</soap:Envelope>
+"""
 
 
 
@@ -56,14 +80,28 @@ class ProviderService:
         return correlation_id, reply_to
 
 
-    def genericReply(connection_id, request, decoder, method, correlation_id):
-        reply = decoder.marshal_result(correlation_id, method)
+    def _createReply(self, _, method, correlation_id):
+        reply = self.decoder.marshal_result(correlation_id, method)
+        return reply
+
+
+    def _createFault(self, err, method):
+
+        error_text = err.getErrorMessage()
+
+        log.msg('Error during service invocation: %s' % error_text)
+
+        # need to do error type -> error id mapping
+        reply = SERVICE_FAULT % {'error_id': 'N/A', 'error_text': error_text }
         return reply
 
 
     def reserve(self, soap_action, soap_data):
 
         assert soap_action == '"http://schemas.ogf.org/nsi/2011/10/connection/service/reserve"'
+
+        t_start = time.time()
+
         method, req = self.decoder.parse_request('reserve', soap_data)
 
         correlation_id, reply_to, = self._getRequestParameters(req)
@@ -79,7 +117,7 @@ class ProviderService:
 
         def parseSTPID(stp_id):
             tokens = stp_id.replace(nsa.STP_PREFIX, '').split(':', 2)
-            return nsa.STP(tokens[0], tokens[1])
+            return nsa.STP(str(tokens[0]), str(tokens[1]))
 
         source_stp  = parseSTPID(path.sourceSTP.stpId)
         dest_stp    = parseSTPID(path.destSTP.stpId)
@@ -89,30 +127,20 @@ class ProviderService:
         start_time = sudsdate.DateTime(sp.schedule.startTime).value
         end_time   = sudsdate.DateTime(sp.schedule.endTime).value
 
-#        if start_time.tzinfo is None:
-#            log.msg('No timezone info specified in schedule start time in reserve request, assuming UTC time.')
         st = start_time.utctimetuple()
         start_time = datetime.datetime(st.tm_year, st.tm_mon, st.tm_mday, st.tm_hour, st.tm_min, st.tm_sec)
 
-#        if end_time.tzinfo is None:
-#            log.msg('No timezone info specified in schedule start time in reservation request, assuming UTC time.')
         et = end_time.utctimetuple()
         end_time = datetime.datetime(et.tm_year, et.tm_mon, et.tm_mday, et.tm_hour, et.tm_min, et.tm_sec)
+
+        t_delta = time.time() - t_start
+        log.msg('Profile: Reserve request parse time: %s' % round(t_delta, 3), profile=True, system=LOG_SYSTEM)
 
         service_parameters      = nsa.ServiceParameters(start_time, end_time, source_stp, dest_stp, bandwidth=bwp)
 
         d = self.provider.reserve(correlation_id, reply_to, requester_nsa, provider_nsa, session_security_attr, global_reservation_id, description, connection_id, service_parameters)
-        d.addErrback(log.err)
-
-        # The deferred will fire when the reservation is made.
-
-        # The initial reservation ACK should be send when the reservation
-        # request is persistent, and a callback should then be issued once
-        # the connection has been reserved. Unfortuantely there is
-        # currently no way of telling when the request is persitent, so we
-        # just return immediately.
-        reply = self.decoder.marshal_result(correlation_id, method)
-        return reply
+        d.addCallbacks(self._createReply, self._createFault, callbackArgs=(method,correlation_id), errbackArgs=(method,))
+        return d
 
 
     def provision(self, soap_action, soap_data):
@@ -123,9 +151,8 @@ class ProviderService:
         requester_nsa, provider_nsa, connection_id = self._getGRTParameters(req.provision)
 
         d = self.provider.provision(correlation_id, reply_to, requester_nsa, provider_nsa, None, connection_id)
-
-        reply = self.decoder.marshal_result(correlation_id, method)
-        return reply
+        d.addCallbacks(self._createReply, self._createFault, callbackArgs=(method,correlation_id), errbackArgs=(method,))
+        return d
 
 
     def release(self, soap_action, soap_data):
@@ -136,10 +163,8 @@ class ProviderService:
         requester_nsa, provider_nsa, connection_id = self._getGRTParameters(req.release)
 
         d = self.provider.release(correlation_id, reply_to, requester_nsa, provider_nsa, None, connection_id)
-
-        reply = self.decoder.marshal_result(correlation_id, method)
-        return reply
-
+        d.addCallbacks(self._createReply, self._createFault, callbackArgs=(method,correlation_id), errbackArgs=(method,))
+        return d
 
 
     def terminate(self, soap_action, soap_data):
@@ -150,9 +175,8 @@ class ProviderService:
         requester_nsa, provider_nsa, connection_id = self._getGRTParameters(req.terminate)
 
         d = self.provider.terminate(correlation_id, reply_to, requester_nsa, provider_nsa, None, connection_id)
-
-        reply = self.decoder.marshal_result(correlation_id, method)
-        return reply
+        d.addCallbacks(self._createReply, self._createFault, callbackArgs=(method,correlation_id), errbackArgs=(method,))
+        return d
 
 
     def query(self, soap_action, soap_data):
@@ -175,9 +199,8 @@ class ProviderService:
             global_reservation_ids = qf.globalReservationId
 
         d = self.provider.query(correlation_id, reply_to, requester_nsa, provider_nsa, None, operation, connection_ids, global_reservation_ids)
-
-        reply = self.decoder.marshal_result(correlation_id, method)
-        return reply
+        d.addCallbacks(self._createReply, self._createFault, callbackArgs=(method,correlation_id))
+        return d
 
 
 

@@ -17,7 +17,7 @@ from xml.etree import ElementTree as ET
 from twisted.python import log
 from twisted.internet import reactor, protocol, defer
 
-from opennsa import error, state
+from opennsa import error, state, config
 from opennsa.backends.common import scheduler
 
 
@@ -46,10 +46,17 @@ class ArgiaBackendError(Exception):
 
 class ArgiaBackend:
 
-    def __init__(self, command_dir, command_bin):
-        self.command_dir = command_dir # directory for argia command
-        self.command_bin = command_bin # name of argia executable
+    def __init__(self, network_name, configuration):
+
+        self.network_name = network_name # current unused
+
+        # extract config items
+        cfg_dict = dict(configuration)
+        self.command_dir = cfg_dict[config.ARGIA_COMMAND_DIR]
+        self.command_bin = cfg_dict[config.ARGIA_COMMAND_BIN]
+
         self.connections = []
+
 
     def createConnection(self, source_port, dest_port, service_parameters):
 
@@ -297,12 +304,12 @@ class ArgiaConnection:
 
         process_proto = ArgiaProcessProtocol()
         try:
-            reactor.spawnProcess(process_proto, self.commnad, args=[self.command_bin, ARGIA_CMD_PROVISION, self.argia_id], path=self.command_dir)
+            reactor.spawnProcess(process_proto, self.command, args=[self.command_bin, ARGIA_CMD_PROVISION, self.argia_id], path=self.command_dir)
         except OSError, e:
             return defer.fail(error.ReserveError('Failed to invoke argia control command (%s)' % str(e)))
         process_proto.d.addCallbacks(provisionConfirmed, provisionFailed, callbackArgs=[process_proto], errbackArgs=[process_proto])
 
-        return d
+        return defer.succeed(None), d
 
 
     def release(self):

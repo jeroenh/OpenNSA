@@ -1,22 +1,14 @@
-This is the OpenNSA issue tracker :-)
 
 General:
 
-  Send provisonConfirmed/Failed when provision actually happens/fail
-  Better handling and reporting of aggregation failures (partial or not)
-  Investigate error message on connection id
+  Documentation :-)
   Persistence for connections
+  Seperate protocol stack from connection (done for provider, client still needs work)
   Deal with bandwidth in calendar (requires joint resource concept)
   TLS for client service
+  Profiling of protocol stack / backends
 
 
 Backends:
-  Force10 E300 backend
   NCS backend
-  Generic backend for simple setup/teardown deployments (no intermediate NRM)
-
-
-Argia backend:
-  State scheduling to terminated does not work.
-  Use the query interface
 
