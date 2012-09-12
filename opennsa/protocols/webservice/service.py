@@ -118,6 +118,10 @@ class ProviderService:
         sp                          = res.serviceParameters
         path                        = res.path
 
+        # def parseSTPID(stp_id):
+        #     tokens = stp_id.replace(nsa.STP_PREFIX, '').split(':', 2)
+        #     return nsa.STP(tokens[0], tokens[1])
+        # TODO: Find better solution:
         def parseSTPID(stp_id):
             tokens = stp_id.replace(nsa.STP_PREFIX, '').split(':', 2)
             return nsa.STP(str(tokens[0]), str(tokens[1]))

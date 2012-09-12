@@ -74,10 +74,10 @@ class ProviderClient:
         res_req.reservation.connectionId            = connection_id
 
         res_req.reservation.path.directionality     = service_parameters.directionality
-        res_req.reservation.path.sourceSTP.stpId    = service_parameters.source_stp.urn()
+        res_req.reservation.path.sourceSTP.stpId    = service_parameters.source_stp
         #res_req.reservation.path.sourceSTP.stpSpecAttrs.guaranteed = ['123' ]
         #res_req.reservation.path.sourceSTP.stpSpecAttrs.preferred =  ['abc', 'def']
-        res_req.reservation.path.destSTP.stpId      = service_parameters.dest_stp.urn()
+        res_req.reservation.path.destSTP.stpId      = service_parameters.dest_stp
 
         res_req.reservation.serviceParameters.schedule.startTime    = utcTime(service_parameters.start_time)
         res_req.reservation.serviceParameters.schedule.endTime      = utcTime(service_parameters.end_time)

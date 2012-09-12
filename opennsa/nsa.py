@@ -210,8 +210,8 @@ class ServiceParameters:
     def protoSP(self):
         return { 'start_time' : self.start_time,
                  'end_time'   : self.end_time,
-                 'source_stp' : self.source_stp.urn(),
-                 'dest_stp'   : self.dest_stp.urn(),
+                 'source_stp' : self.source_stp,
+                 'dest_stp'   : self.dest_stp,
                  'stps'       : self.stps        }
 
 

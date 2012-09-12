@@ -99,7 +99,6 @@ class NSIService:
         self.connections.setdefault(requester_nsa, {})[conn.connection_id] = conn
 
         # figure out nature of request
-
         path_info = ( connection_id, source_stp.network, source_stp.endpoint, dest_stp.network, dest_stp.endpoint, self.network)
 
         if source_stp.network == self.network and dest_stp.network == self.network:
