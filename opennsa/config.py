@@ -20,6 +20,7 @@ DEFAULT_TCP_PORT        = 9080
 DEFAULT_TLS_PORT        = 9443
 DEFAULT_VERIFY          = 'true'
 
+DEFAULT_RDFDB           = "/Users/jeroen/Projects/OpenNSA-UvA/opennsa/rdfdb"
 
 # config blocks and options
 BLOCK_SERVICE    = 'service'
@@ -188,6 +189,12 @@ def readVerifyConfig(cfg):
         except ConfigParser.NoOptionError, e:
             # Not enough options for configuring tls context
             raise ConfigurationError('Missing TLS option: %s' % str(e))
+
+    try:
+        vc[RDFDB] = cfg.get(BLOCK_SERVICE, RDFDB)
+    except ConfigParser.NoOptionError:
+        vc[RDFDB] = DEFAULT_RDFDB
+
 
     # backends
 
