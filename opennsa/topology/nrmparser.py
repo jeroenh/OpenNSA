@@ -33,7 +33,7 @@ class NRMEntry:
 
     def __init__(self, port_type, port_name, remote_port, labels, interface):
         # port_type     : string
-        # port_name     : string
+        # port_name     : (string, string, string)
         # remote_port   : (string, string, string, string)
         # labels        : [ nsa.Label ]
         # interface     : string
@@ -65,7 +65,8 @@ def parseTopologySpec(source):
     assert isinstance(source, file) or isinstance(source, StringIO.StringIO), 'Topology source must be file or StringIO instance'
 
     TOPO_RX = re.compile('''(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+)''')
-    PORT_RX = re.compile("(.+?)\((.+?)\|(.+?)\)@(.+?)")
+    PORT_RX = re.compile("(.+?)\((.+?)\|(.+?)\)")
+    REM_PORT_RX = re.compile("(.+?)\((.+?)\|(.+?)\)@(.+?)")
     entries = []
 
     for line in source:
@@ -80,19 +81,27 @@ def parseTopologySpec(source):
         else:
             port_type, port_name, remote_port, label_spec, interface = match.groups()
 
+            # Parse port_type
             if not port_type in PORT_TYPES:
                 raise error.TopologyError('Port type %s is not a valid port type' % port_type)
 
+            # Parse port_name
+            match = PORT_RX.match(port_name)
+            if not match:
+                raise error.TopologyError('Port name %s is not valid: "basename(-insuffix|-outsuffix)"' % port_name)
+            port_name = match.groups()
+
+            # Parse remote_port
             if remote_port == '-':
                 remote_port = None
             else:
-                match = PORT_RX.match(remote_port)
+                match = REM_PORT_RX.match(remote_port)
                 if not match:
-                    raise error.TopologyError('Remote %s is not valid: either "-" or "base(-insuffix|-outsuffix)@domain"' % remote_port)
+                    raise error.TopologyError('Remote %s is not valid: either "-" or "basename(-insuffix|-outsuffix)@domain"' % remote_port)
                 remote_port = match.groups()
 
+            # Parse labels
             labels = []
-
             for l_entry in label_spec.split(','):
                 if not ':' in l_entry:
                     raise error.TopologyError('Invalid label description: %s' % l_entry)
@@ -108,7 +117,7 @@ def parseTopologySpec(source):
 
                 labels.append( nsa.Label(label_type, label_range) ) # range is parsed in nsa.Label
 
-
+            # Parse interface
             if interface.startswith('"') and interface.endswith('"'):
                 interface = interface[1:-1]
 
@@ -133,14 +142,20 @@ def createNetwork(network_name, ns_agent, nrm_entries):
     for ne in nrm_entries:
 
         if ne.port_type == BIDRECTIONAL_ETHERNET:
-            base_name, in_suffix, out_suffix, domain = ne.remote_port
-            inbound_port  = nml.Port(ne.port_name + '-in',  nml.INBOUND,  ne.labels, bandwidth, (domain, base_name+out_suffix))
-            outbound_port = nml.Port(ne.port_name + '-out', nml.OUTBOUND, ne.labels, bandwidth, (domain, base_name+in_suffix))
+            base_name, in_suffix, out_suffix = ne.port_name
+            if ne.remote_port:
+                r_base_name, r_in_suffix, r_out_suffix, r_domain = ne.remote_port
+                inbound_port  = nml.Port(base_name + in_suffix,  nml.INBOUND,  ne.labels, bandwidth, (r_domain, r_base_name+r_out_suffix))
+                outbound_port = nml.Port(base_name + out_suffix, nml.OUTBOUND, ne.labels, bandwidth, (r_domain, r_base_name+r_in_suffix))
+            else:
+                inbound_port  = nml.Port(base_name + in_suffix,  nml.INBOUND,  ne.labels, bandwidth, None)
+                outbound_port = nml.Port(base_name + out_suffix, nml.OUTBOUND, ne.labels, bandwidth, None)
+
             port = nml.BidirectionalPort(inbound_port, outbound_port)
 
             ports += [ inbound_port, outbound_port, port ]
 
-            port_interface_map[ne.port_name] = ne.interface
+            port_interface_map[base_name] = ne.interface
 
         elif ne.port_type == UNIDIRECTIONAL_ETHERNET:
 
