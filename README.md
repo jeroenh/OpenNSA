@@ -1,4 +1,4 @@
-= Secondary Repository for OpenNSA =
+# Secondary Repository for OpenNSA #
 
 The primary repository for OpenNSA is available at http://git.nordu.net/?p=opennsa.git;a=summary and git://git.nordu.net/opennsa.git .
 
@@ -6,7 +6,7 @@ This secondary repository for OpenNSA allows users to submit issues, follow the 
 It tries to follow development from the primary repository, but the github repository is not guaranteed to be up to date.
 
 
-= OpenNSA =
+# OpenNSA #
 
 OpenNSA is an implementation of the Network Service Interface (NSI).
 
